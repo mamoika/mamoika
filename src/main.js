@@ -78,28 +78,20 @@ function renderGallery() {
     galleryGrid.appendChild(card);
   });
 
-  // Intersection Observer for animations
-  const cards = document.querySelectorAll('.poster-card');
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
-        
-        setTimeout(() => {
-          entry.target.style.transitionDelay = '0s';
-          entry.target.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
-        }, 800 + (parseInt(entry.target.style.transitionDelay || '0') * 1000));
-        
-        observer.unobserve(entry.target);
-      }
+  // Prosta animacja pojawiania się (zamiast IntersectionObserver, który mógł blokować widoczność)
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.poster-card');
+    cards.forEach(card => {
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+      
+      // Przywróć normalne transition po wejściu
+      setTimeout(() => {
+        card.style.transitionDelay = '0s';
+        card.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+      }, 1000);
     });
-  }, {
-    threshold: 0.1,
-    rootMargin: "0px 0px -50px 0px"
-  });
-
-  cards.forEach(card => observer.observe(card));
+  }, 50);
 }
 
 // Function to delete poster from Supabase
