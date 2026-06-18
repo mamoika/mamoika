@@ -6,7 +6,7 @@ let editModeId = null;
 
 // Ukryty tryb administratora
 function setupHiddenAdmin() {
-  const logo = document.querySelector('.logo');
+  const logo = document.querySelector('.nav-logo');
   if (!logo) return;
   
   // Sprawdź, czy sesja istnieje
