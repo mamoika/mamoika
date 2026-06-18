@@ -1,22 +1,32 @@
 import './style.css';
+import { supabase } from './supabaseClient';
 
-// Default initial poster (only the real one)
-const defaultPosters = [
-  {
-    id: 1,
-    artist: "Fashion Time Event",
-    date: "October 19, 2024",
-    venue: "Main Stage",
-    image: "https://www.fashiontime.ru/upload/articles-v3/5adef19751e8fw719.jpg"
+let posters = [];
+
+// Fetch posters from Supabase
+async function fetchPosters() {
+  if (!supabase) {
+    document.getElementById('gallery-grid').innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: #fff; border-radius: 12px; border: 1px solid #ffcc00;">
+        <h3>⚠️ Supabase Not Connected</h3>
+        <p>Brak zmiennych środowiskowych VITE_SUPABASE_URL oraz VITE_SUPABASE_ANON_KEY. Dodaj je, aby połączyć się z bazą!</p>
+      </div>
+    `;
+    return;
   }
-];
 
-// Load from localStorage or use default
-let posters = JSON.parse(localStorage.getItem('myPosters')) || defaultPosters;
+  const { data, error } = await supabase
+    .from('posters')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-// Save to localStorage
-function savePosters() {
-  localStorage.setItem('myPosters', JSON.stringify(posters));
+  if (error) {
+    console.error('Error fetching posters:', error);
+    return;
+  }
+  
+  posters = data || [];
+  renderGallery();
 }
 
 // Function to render posters
@@ -92,39 +102,69 @@ function renderGallery() {
   cards.forEach(card => observer.observe(card));
 }
 
-// Function to delete poster
-function deletePoster(id) {
-  posters = posters.filter(p => p.id !== id);
-  savePosters();
-  renderGallery();
+// Function to delete poster from Supabase
+async function deletePoster(id) {
+  if (!supabase) return;
+  
+  const { error } = await supabase
+    .from('posters')
+    .delete()
+    .eq('id', id);
+    
+  if (error) {
+    alert("Error deleting poster!");
+    console.error(error);
+    return;
+  }
+  
+  fetchPosters();
 }
 
-// Function to add new poster
+// Function to add new poster to Supabase
 function setupAdminForm() {
   const form = document.getElementById('poster-form');
   if (!form) return;
   
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!supabase) {
+      alert("Connect Supabase first by adding environment variables.");
+      return;
+    }
     
     const newPoster = {
-      id: Date.now(), // Generate unique ID based on timestamp
       image: document.getElementById('poster-url').value,
       artist: document.getElementById('poster-artist').value,
       date: document.getElementById('poster-date').value,
       venue: document.getElementById('poster-venue').value,
     };
     
-    posters.push(newPoster);
-    savePosters();
-    renderGallery();
+    // UI Loading state
+    const btn = form.querySelector('button');
+    const originalText = btn.innerText;
+    btn.innerText = "Adding...";
+    btn.disabled = true;
     
+    const { error } = await supabase
+      .from('posters')
+      .insert([newPoster]);
+      
+    btn.innerText = originalText;
+    btn.disabled = false;
+    
+    if (error) {
+      alert("Error adding poster: " + error.message);
+      console.error(error);
+      return;
+    }
+    
+    fetchPosters();
     form.reset(); // Clear the form
   });
 }
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  renderGallery();
   setupAdminForm();
+  fetchPosters();
 });
