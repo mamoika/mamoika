@@ -2,16 +2,54 @@ import './style.css';
 import { supabase } from './supabaseClient';
 
 let posters = [];
+let editModeId = null;
+
+// Ukryty tryb administratora
+function setupHiddenAdmin() {
+  const logo = document.querySelector('.logo');
+  if (!logo) return;
+  
+  // Sprawdź, czy sesja istnieje
+  if (sessionStorage.getItem('isAdmin') === 'true') {
+    document.body.classList.add('admin-mode');
+  }
+
+  // Dwa szybkie kliknięcia w logo
+  logo.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    if (document.body.classList.contains('admin-mode')) {
+      // Wyloguj
+      if (confirm('Wylogować z trybu admina?')) {
+        sessionStorage.removeItem('isAdmin');
+        document.body.classList.remove('admin-mode');
+      }
+      return;
+    }
+    
+    // Zaloguj
+    const pwd = prompt('Wpisz hasło administratora:');
+    if (pwd === 'admin123') { // Domyślne proste hasło
+      sessionStorage.setItem('isAdmin', 'true');
+      document.body.classList.add('admin-mode');
+      alert('Zalogowano! Panel dodawania jest teraz widoczny na dole.');
+    } else if (pwd !== null) {
+      alert('Złe hasło!');
+    }
+  });
+}
 
 // Fetch posters from Supabase
 async function fetchPosters() {
   if (!supabase) {
-    document.getElementById('gallery-grid').innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: #fff; border-radius: 12px; border: 1px solid #ffcc00;">
-        <h3>⚠️ Supabase Not Connected</h3>
-        <p>Brak zmiennych środowiskowych VITE_SUPABASE_URL oraz VITE_SUPABASE_ANON_KEY. Dodaj je, aby połączyć się z bazą!</p>
-      </div>
-    `;
+    const grid = document.getElementById('gallery-grid');
+    if (grid) {
+      grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: #fff; border-radius: 12px; border: 1px solid #ffcc00;">
+          <h3>⚠️ Supabase Not Connected</h3>
+          <p>Brak zmiennych środowiskowych VITE_SUPABASE_URL oraz VITE_SUPABASE_ANON_KEY. Dodaj je, aby połączyć się z bazą!</p>
+        </div>
+      `;
+    }
     return;
   }
 
@@ -47,9 +85,14 @@ function renderGallery() {
     card.style.transitionDelay = `${(index % 5) * 0.1}s`;
     
     card.innerHTML = `
-      <button class="delete-btn" aria-label="Delete Poster">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
+      <div class="admin-controls">
+        <button class="edit-btn" aria-label="Edit Poster">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+        </button>
+        <button class="delete-btn" aria-label="Delete Poster">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
       <div class="poster-img-container">
         <img src="${poster.image}" alt="${poster.artist} Poster" class="poster-img" onerror="this.src='https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=800&auto=format&fit=crop';">
       </div>
@@ -72,13 +115,22 @@ function renderGallery() {
     const deleteBtn = card.querySelector('.delete-btn');
     deleteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      deletePoster(poster.id);
+      if (confirm('Na pewno chcesz usunąć ten plakat?')) {
+        deletePoster(poster.id);
+      }
+    });
+
+    // Add edit event listener
+    const editBtn = card.querySelector('.edit-btn');
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startEditing(poster);
     });
     
     galleryGrid.appendChild(card);
   });
 
-  // Prosta animacja pojawiania się (zamiast IntersectionObserver, który mógł blokować widoczność)
+  // Prosta animacja pojawiania się
   setTimeout(() => {
     const cards = document.querySelectorAll('.poster-card');
     cards.forEach(card => {
@@ -92,6 +144,21 @@ function renderGallery() {
       }, 1000);
     });
   }, 50);
+}
+
+// Rozpoczęcie edycji
+function startEditing(poster) {
+  editModeId = poster.id;
+  document.getElementById('poster-url').value = poster.image;
+  document.getElementById('poster-artist').value = poster.artist;
+  document.getElementById('poster-date').value = poster.date;
+  document.getElementById('poster-venue').value = poster.venue;
+  
+  const formBtn = document.querySelector('#poster-form button');
+  formBtn.innerText = "Update Poster";
+  
+  // Przeskroluj gładko do formularza
+  document.querySelector('.admin-section').scrollIntoView({ behavior: 'smooth' });
 }
 
 // Function to delete poster from Supabase
@@ -112,7 +179,7 @@ async function deletePoster(id) {
   fetchPosters();
 }
 
-// Function to add new poster to Supabase
+// Function to add or update poster
 function setupAdminForm() {
   const form = document.getElementById('poster-form');
   if (!form) return;
@@ -124,7 +191,7 @@ function setupAdminForm() {
       return;
     }
     
-    const newPoster = {
+    const posterData = {
       image: document.getElementById('poster-url').value,
       artist: document.getElementById('poster-artist').value,
       date: document.getElementById('poster-date').value,
@@ -134,29 +201,46 @@ function setupAdminForm() {
     // UI Loading state
     const btn = form.querySelector('button');
     const originalText = btn.innerText;
-    btn.innerText = "Adding...";
+    btn.innerText = "Zapisywanie...";
     btn.disabled = true;
     
-    const { error } = await supabase
-      .from('posters')
-      .insert([newPoster]);
+    let dbError;
+    
+    if (editModeId) {
+      // Aktualizacja
+      const { error } = await supabase
+        .from('posters')
+        .update(posterData)
+        .eq('id', editModeId);
+      dbError = error;
+    } else {
+      // Dodawanie nowego
+      const { error } = await supabase
+        .from('posters')
+        .insert([posterData]);
+      dbError = error;
+    }
       
-    btn.innerText = originalText;
+    btn.innerText = "Add Poster";
     btn.disabled = false;
     
-    if (error) {
-      alert("Error adding poster: " + error.message);
-      console.error(error);
+    if (dbError) {
+      alert("Error saving poster: " + dbError.message);
+      console.error(dbError);
       return;
     }
     
+    // Zresetuj formularz i stan edycji
+    form.reset();
+    editModeId = null;
+    
     fetchPosters();
-    form.reset(); // Clear the form
   });
 }
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+  setupHiddenAdmin();
   setupAdminForm();
   fetchPosters();
 });

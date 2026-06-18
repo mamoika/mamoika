@@ -214,36 +214,42 @@ body {
   cursor: pointer;
 }
 
-.delete-btn {
+.admin-controls {
   position: absolute;
   top: 1rem;
   right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+body.admin-mode .poster-card:hover .admin-controls {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.delete-btn, .edit-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(0,0,0,0.1);
-  color: #ff3b30; /* Apple red */
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
-  opacity: 0;
-  transform: scale(0.9);
-  transition: opacity 0.2s ease, transform 0.2s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: background 0.2s, color 0.2s;
 }
 
-.poster-card:hover .delete-btn {
-  opacity: 1;
-  transform: scale(1);
-}
+.delete-btn { color: #ff3b30; }
+.delete-btn:hover { background: #ff3b30; color: white; }
 
-.delete-btn:hover {
-  background: #ff3b30;
-  color: white;
-}
+.edit-btn { color: #007aff; }
+.edit-btn:hover { background: #007aff; color: white; }
 
 .poster-card:hover {
   transform: translateY(-5px);
@@ -298,9 +304,14 @@ body {
 
 /* Admin Section */
 .admin-section {
+  display: none;
   padding: 2rem 2rem 5rem;
   max-width: 800px;
   margin: 0 auto;
+}
+
+body.admin-mode .admin-section {
+  display: block;
 }
 
 .admin-container {
