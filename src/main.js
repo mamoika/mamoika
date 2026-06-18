@@ -1,49 +1,47 @@
 import './style.css';
 
-// Mock data translated to English
-const posters = [
+// Default initial poster (only the real one)
+const defaultPosters = [
   {
     id: 1,
-    artist: "Electric Velocity",
+    artist: "Fashion Time Event",
     date: "October 19, 2024",
-    venue: "The Vulcan Arcade, Downtown",
+    venue: "Main Stage",
     image: "https://www.fashiontime.ru/upload/articles-v3/5adef19751e8fw719.jpg"
-  },
-  {
-    id: 2,
-    artist: "Synthwave Neon Nights",
-    date: "July 12, 2024",
-    venue: "The Chrome Dome, LA",
-    image: "/poster2.png"
-  },
-  {
-    id: 3,
-    artist: "Acoustic Sunset",
-    date: "September 5, 2024",
-    venue: "Central Park",
-    image: "/poster3.png"
   }
 ];
 
-// Function to render posters in Apple-style cards
+// Load from localStorage or use default
+let posters = JSON.parse(localStorage.getItem('myPosters')) || defaultPosters;
+
+// Save to localStorage
+function savePosters() {
+  localStorage.setItem('myPosters', JSON.stringify(posters));
+}
+
+// Function to render posters
 function renderGallery() {
   const galleryGrid = document.getElementById('gallery-grid');
-  
   if (!galleryGrid) return;
+  
+  galleryGrid.innerHTML = ''; // Clear before rendering
   
   posters.forEach((poster, index) => {
     const card = document.createElement('div');
     card.className = 'poster-card';
+    card.dataset.id = poster.id;
     
-    // Initial state for scroll animation
     card.style.opacity = '0';
     card.style.transform = 'translateY(20px)';
     card.style.transition = 'opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)';
-    card.style.transitionDelay = `${index * 0.1}s`;
+    card.style.transitionDelay = `${(index % 5) * 0.1}s`;
     
     card.innerHTML = `
+      <button class="delete-btn" aria-label="Delete Poster">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
       <div class="poster-img-container">
-        <img src="${poster.image}" alt="${poster.artist} Concert Poster" class="poster-img" onerror="this.src='https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=800&auto=format&fit=crop';">
+        <img src="${poster.image}" alt="${poster.artist} Poster" class="poster-img" onerror="this.src='https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=800&auto=format&fit=crop';">
       </div>
       <div class="poster-info">
         <h3 class="poster-artist">${poster.artist}</h3>
@@ -60,10 +58,17 @@ function renderGallery() {
       </div>
     `;
     
+    // Add delete event listener
+    const deleteBtn = card.querySelector('.delete-btn');
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deletePoster(poster.id);
+    });
+    
     galleryGrid.appendChild(card);
   });
 
-  // Intersection Observer for smooth fade-in animations
+  // Intersection Observer for animations
   const cards = document.querySelectorAll('.poster-card');
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -71,10 +76,8 @@ function renderGallery() {
         entry.target.style.opacity = '1';
         entry.target.style.transform = 'translateY(0)';
         
-        // Remove transition delay after animation completes to not affect hover state
         setTimeout(() => {
           entry.target.style.transitionDelay = '0s';
-          // Ensure hover transition stays smooth
           entry.target.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
         }, 800 + (parseInt(entry.target.style.transitionDelay || '0') * 1000));
         
@@ -89,7 +92,39 @@ function renderGallery() {
   cards.forEach(card => observer.observe(card));
 }
 
-// Initialize on DOM load
+// Function to delete poster
+function deletePoster(id) {
+  posters = posters.filter(p => p.id !== id);
+  savePosters();
+  renderGallery();
+}
+
+// Function to add new poster
+function setupAdminForm() {
+  const form = document.getElementById('poster-form');
+  if (!form) return;
+  
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const newPoster = {
+      id: Date.now(), // Generate unique ID based on timestamp
+      image: document.getElementById('poster-url').value,
+      artist: document.getElementById('poster-artist').value,
+      date: document.getElementById('poster-date').value,
+      venue: document.getElementById('poster-venue').value,
+    };
+    
+    posters.push(newPoster);
+    savePosters();
+    renderGallery();
+    
+    form.reset(); // Clear the form
+  });
+}
+
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
   renderGallery();
+  setupAdminForm();
 });

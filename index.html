@@ -51,6 +51,19 @@
           <!-- Posters will be rendered here by JS -->
         </div>
       </section>
+
+      <section id="admin" class="admin-section">
+        <div class="admin-container glass">
+          <h3>Manage Posters</h3>
+          <form id="poster-form" class="poster-form">
+            <input type="url" id="poster-url" placeholder="Image URL (https://...)" required>
+            <input type="text" id="poster-artist" placeholder="Artist / Event Name" required>
+            <input type="text" id="poster-date" placeholder="Date (e.g. October 19, 2024)" required>
+            <input type="text" id="poster-venue" placeholder="Venue" required>
+            <button type="submit" class="btn btn-primary">Add Poster</button>
+          </form>
+        </div>
+      </section>
     </main>
 
     <footer id="footer" class="footer">
