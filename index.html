@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moja Wizytówka | Koncerty</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- W tle dekoracyjne animowane kule -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <header class="hero">
+      <div class="hero-content">
+        <h1 class="hero-title">Cześć, jestem <span class="highlight">Rusłan</span></h1>
+        <p class="hero-subtitle">
+          Witaj na mojej nowoczesnej wizytówce. Poniżej znajdziesz kolekcję plakatów z niesamowitych koncertów, w których miałem okazję uczestniczyć.
+        </p>
+        <button class="btn-primary" onclick="document.getElementById('gallery').scrollIntoView({behavior: 'smooth'})">
+          Zobacz Plakaty
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section id="gallery" class="gallery-section">
+        <h2 class="section-title">Moje Koncerty</h2>
+        <div id="gallery-grid" class="gallery-grid">
+          <!-- Plakaty będą renderowane przez JS -->
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="glass-footer">
+        <p>&copy; 2026 Rusłan. Zbudowane z pasją do designu i muzyki.</p>
+        <div class="social-links">
+          <a href="#">Instagram</a>
+          <a href="#">Twitter</a>
+          <a href="#">Spotify</a>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
