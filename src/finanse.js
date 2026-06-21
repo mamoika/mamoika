@@ -1,15 +1,14 @@
 import { supabase } from './supabaseClient';
 
-const FINANSE_PASSWORD = 'finanse123';
-const SESSION_KEY = 'finanse_auth';
-
 let allDebts = [];
 let activeFilter = 'all';
 let editingId = null;
+let currentUser = null;
 
-// --- Auth ---
-function isAuthenticated() {
-  return sessionStorage.getItem(SESSION_KEY) === 'true';
+// --- Auth (Supabase) ---
+function showLogin() {
+  document.getElementById('lock-screen').style.display = 'flex';
+  document.getElementById('app').classList.add('app-hidden');
 }
 
 function showApp() {
@@ -18,33 +17,56 @@ function showApp() {
   loadDebts();
 }
 
-function setupLockScreen() {
-  if (isAuthenticated()) {
-    showApp();
+async function setupAuth() {
+  if (!supabase) {
+    document.getElementById('lock-error').textContent =
+      'Brak połączenia z Supabase. Dodaj zmienne środowiskowe VITE_SUPABASE_URL i VITE_SUPABASE_ANON_KEY.';
     return;
   }
 
+  // Sprawdź istniejącą sesję
+  const { data: { session } } = await supabase.auth.getSession();
+  currentUser = session?.user || null;
+  if (currentUser) showApp();
+  else showLogin();
+
+  // Reaguj na zmiany stanu logowania
+  supabase.auth.onAuthStateChange((_event, session) => {
+    currentUser = session?.user || null;
+    if (currentUser) showApp();
+    else showLogin();
+  });
+
+  // Formularz logowania
   const form = document.getElementById('lock-form');
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const val = document.getElementById('lock-password').value;
-    if (val === FINANSE_PASSWORD) {
-      sessionStorage.setItem(SESSION_KEY, 'true');
-      showApp();
-    } else {
-      const err = document.getElementById('lock-error');
-      err.textContent = 'Złe hasło. Spróbuj ponownie.';
-      document.getElementById('lock-password').value = '';
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const err = document.getElementById('lock-error');
+    const btn = document.getElementById('login-btn');
+
+    err.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Logowanie...';
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    btn.disabled = false;
+    btn.textContent = 'Zaloguj';
+
+    if (error) {
+      err.textContent = 'Błędny e-mail lub hasło.';
+      document.getElementById('login-password').value = '';
     }
   });
 
-  document.getElementById('lock-password').focus();
+  document.getElementById('login-email').focus();
 }
 
-document.getElementById('logout-btn').addEventListener('click', (e) => {
+document.getElementById('logout-btn').addEventListener('click', async (e) => {
   e.preventDefault();
-  sessionStorage.removeItem(SESSION_KEY);
-  location.reload();
+  if (supabase) await supabase.auth.signOut();
 });
 
 // --- Data ---
@@ -237,6 +259,11 @@ document.getElementById('debt-form').addEventListener('submit', async (e) => {
     notes: document.getElementById('debt-notes').value.trim() || null,
   };
 
+  // Przypisz właściciela przy dodawaniu nowej pozycji
+  if (!editingId && currentUser) {
+    payload.user_id = currentUser.id;
+  }
+
   const btn = document.getElementById('debt-submit-btn');
   btn.disabled = true;
   btn.textContent = 'Zapisywanie...';
@@ -269,5 +296,5 @@ document.querySelectorAll('.filter-tab').forEach((tab) => {
 
 // --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
-  setupLockScreen();
+  setupAuth();
 });

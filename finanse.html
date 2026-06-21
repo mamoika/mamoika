@@ -11,15 +11,16 @@
     <link rel="stylesheet" href="/src/finanse.css">
   </head>
   <body>
-    <!-- Ekran hasła -->
+    <!-- Ekran logowania (Supabase Auth) -->
     <div id="lock-screen" class="lock-screen">
       <div class="lock-card glass">
         <div class="lock-icon">🔒</div>
         <h2>Finanse</h2>
-        <p>Wpisz hasło, aby wejść</p>
+        <p>Zaloguj się, aby zobaczyć swoje zadłużenia</p>
         <form id="lock-form">
-          <input type="password" id="lock-password" placeholder="Hasło" autocomplete="off" />
-          <button type="submit" class="btn btn-primary">Wejdź</button>
+          <input type="email" id="login-email" placeholder="E-mail" autocomplete="username" required />
+          <input type="password" id="login-password" placeholder="Hasło" autocomplete="current-password" required />
+          <button type="submit" class="btn btn-primary" id="login-btn">Zaloguj</button>
         </form>
         <p id="lock-error" class="lock-error"></p>
       </div>
