@@ -98,13 +98,19 @@ function filterDebts() {
   return allDebts.filter((d) => d.type === activeFilter);
 }
 
+function isPaid(d) {
+  return d.status === 'oplacone';
+}
+
 function updateSummary() {
-  const totalDebt = allDebts.reduce((s, d) => s + (d.remaining_amount || 0), 0);
-  const totalMonthly = allDebts.reduce((s, d) => s + (d.monthly_payment || 0), 0);
+  // Do podsumowania liczymy tylko nieopłacone pozycje
+  const unpaid = allDebts.filter((d) => !isPaid(d));
+  const totalDebt = unpaid.reduce((s, d) => s + (d.remaining_amount || 0), 0);
+  const totalMonthly = unpaid.reduce((s, d) => s + (d.monthly_payment || 0), 0);
 
   document.getElementById('total-debt').textContent = formatPLN(totalDebt);
   document.getElementById('total-monthly').textContent = totalMonthly > 0 ? formatPLN(totalMonthly) : '— zł';
-  document.getElementById('total-count').textContent = allDebts.length;
+  document.getElementById('total-count').textContent = `${unpaid.length} / ${allDebts.length}`;
 }
 
 function formatPLN(amount) {
@@ -145,12 +151,16 @@ function renderDebts(debts) {
         : null;
 
       const color = TYPE_COLORS[d.type] || '#8e8e93';
+      const paid = isPaid(d);
 
       return `
-        <div class="debt-card glass" data-id="${d.id}">
+        <div class="debt-card glass ${paid ? 'is-paid' : ''}" data-id="${d.id}">
           <div class="debt-card-top">
             <div class="debt-info">
-              <span class="debt-type-badge" style="background:${color}22;color:${color}">${TYPE_LABELS[d.type] || d.type}</span>
+              <div class="debt-badges">
+                <span class="debt-type-badge" style="background:${color}22;color:${color}">${TYPE_LABELS[d.type] || d.type}</span>
+                <span class="status-badge ${paid ? 'status-paid' : 'status-due'}">${paid ? 'Opłacone' : 'Do zapłaty'}</span>
+              </div>
               <h3 class="debt-name">${d.name}</h3>
               ${d.notes ? `<p class="debt-notes">${d.notes}</p>` : ''}
             </div>
@@ -173,6 +183,9 @@ function renderDebts(debts) {
               ${dueStr ? `<span class="meta-item">⏰ ${dueStr}</span>` : ''}
             </div>
             <div class="debt-actions">
+              <button class="icon-btn toggle-paid-btn" data-id="${d.id}" title="${paid ? 'Oznacz jako do zapłaty' : 'Oznacz jako opłacone'}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </button>
               <button class="icon-btn edit-debt-btn" data-id="${d.id}" title="Edytuj">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               </button>
@@ -186,6 +199,10 @@ function renderDebts(debts) {
     })
     .join('');
 
+  list.querySelectorAll('.toggle-paid-btn').forEach((btn) => {
+    btn.addEventListener('click', () => togglePaid(btn.dataset.id));
+  });
+
   list.querySelectorAll('.edit-debt-btn').forEach((btn) => {
     btn.addEventListener('click', () => openEditModal(btn.dataset.id));
   });
@@ -193,6 +210,15 @@ function renderDebts(debts) {
   list.querySelectorAll('.delete-debt-btn').forEach((btn) => {
     btn.addEventListener('click', () => deleteDebt(btn.dataset.id));
   });
+}
+
+async function togglePaid(id) {
+  const debt = allDebts.find((d) => String(d.id) === String(id));
+  if (!debt) return;
+  const newStatus = isPaid(debt) ? 'do_zaplaty' : 'oplacone';
+  const { error } = await supabase.from('debts').update({ status: newStatus }).eq('id', id);
+  if (error) { alert('Błąd zmiany statusu: ' + error.message); return; }
+  loadDebts();
 }
 
 async function deleteDebt(id) {
@@ -208,6 +234,7 @@ function openAddModal() {
   document.getElementById('modal-title').textContent = 'Dodaj zadłużenie';
   document.getElementById('debt-form').reset();
   document.getElementById('debt-id').value = '';
+  document.getElementById('debt-status').value = 'do_zaplaty';
   document.getElementById('debt-submit-btn').textContent = 'Zapisz';
   showModal();
 }
@@ -221,6 +248,7 @@ function openEditModal(id) {
   document.getElementById('debt-id').value = debt.id;
   document.getElementById('debt-name').value = debt.name || '';
   document.getElementById('debt-type').value = debt.type || 'inne';
+  document.getElementById('debt-status').value = debt.status || 'do_zaplaty';
   document.getElementById('debt-remaining').value = debt.remaining_amount || '';
   document.getElementById('debt-total').value = debt.total_amount || '';
   document.getElementById('debt-monthly').value = debt.monthly_payment || '';
@@ -252,6 +280,7 @@ document.getElementById('debt-form').addEventListener('submit', async (e) => {
   const payload = {
     name: document.getElementById('debt-name').value.trim(),
     type: document.getElementById('debt-type').value,
+    status: document.getElementById('debt-status').value,
     remaining_amount: parseFloat(document.getElementById('debt-remaining').value) || 0,
     total_amount: parseFloat(document.getElementById('debt-total').value) || null,
     monthly_payment: parseFloat(document.getElementById('debt-monthly').value) || null,

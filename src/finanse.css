@@ -197,16 +197,32 @@ body {
   margin-bottom: 0.75rem;
 }
 .debt-info { flex: 1; }
+.debt-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
 .debt-type-badge {
   display: inline-block;
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.2rem 0.65rem;
   border-radius: 6px;
-  margin-bottom: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
+.status-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.status-due { background: rgba(255, 59, 48, 0.12); color: #ff3b30; }
+.status-paid { background: rgba(52, 199, 89, 0.15); color: #248a3d; }
+
+/* Karta opłacona */
+.debt-card.is-paid { opacity: 0.62; }
+.debt-card.is-paid .debt-remaining { text-decoration: line-through; }
+.toggle-paid-btn:hover { border-color: #34c759; color: #248a3d; }
 .debt-name { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.2rem; }
 .debt-notes { font-size: 0.85rem; color: var(--text-secondary); }
 
