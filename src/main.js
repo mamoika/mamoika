@@ -12,14 +12,20 @@ function applyAuth(user) {
   } else {
     document.body.classList.remove('admin-mode');
   }
+
+  // Zaktualizuj przycisk w nawigacji
+  const authLink = document.getElementById('auth-link');
+  if (authLink) {
+    authLink.textContent = user ? 'Wyloguj' : 'Zaloguj';
+  }
 }
 
 async function setupAuth() {
-  const logo = document.querySelector('.nav-logo');
+  const authLink = document.getElementById('auth-link');
 
-  // Dwa szybkie kliknięcia w logo: zaloguj (przejdź do strony logowania) lub wyloguj
-  if (logo) {
-    logo.addEventListener('dblclick', async (e) => {
+  // Przycisk Zaloguj/Wyloguj w nawigacji
+  if (authLink) {
+    authLink.addEventListener('click', async (e) => {
       e.preventDefault();
       if (document.body.classList.contains('admin-mode')) {
         if (confirm('Wylogować się?')) {
