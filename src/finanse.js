@@ -95,7 +95,9 @@ async function loadDebts() {
 
 function filterDebts() {
   if (activeFilter === 'all') return allDebts;
-  return allDebts.filter((d) => d.type === activeFilter);
+  if (activeFilter === 'subscription') return allDebts.filter((d) => isSubscription(d));
+  // Filtry typów dotyczą tylko zadłużeń
+  return allDebts.filter((d) => !isSubscription(d) && d.type === activeFilter);
 }
 
 function isPaid(d) {
@@ -103,14 +105,26 @@ function isPaid(d) {
 }
 
 function updateSummary() {
-  // Do podsumowania liczymy tylko nieopłacone pozycje
-  const unpaid = allDebts.filter((d) => !isPaid(d));
-  const totalDebt = unpaid.reduce((s, d) => s + (d.remaining_amount || 0), 0);
-  const totalMonthly = unpaid.reduce((s, d) => s + (d.monthly_payment || 0), 0);
+  const debts = allDebts.filter((d) => !isSubscription(d));
+  const subs = allDebts.filter((d) => isSubscription(d) && d.active !== false);
+
+  // Łączne zadłużenie — tylko nieopłacone długi
+  const totalDebt = debts
+    .filter((d) => !isPaid(d))
+    .reduce((s, d) => s + (d.remaining_amount || 0), 0);
+
+  // Miesięczne stałe opłaty (aktywne subskrypcje, rozłożone na miesiąc)
+  const totalSubs = subs.reduce((s, d) => s + monthlyEquiv(d), 0);
+
+  // Miesięczne obciążenie = raty długów + stałe opłaty
+  const debtMonthly = debts
+    .filter((d) => !isPaid(d))
+    .reduce((s, d) => s + (d.monthly_payment || 0), 0);
+  const totalMonthly = debtMonthly + totalSubs;
 
   document.getElementById('total-debt').textContent = formatPLN(totalDebt);
   document.getElementById('total-monthly').textContent = totalMonthly > 0 ? formatPLN(totalMonthly) : '— zł';
-  document.getElementById('total-count').textContent = `${unpaid.length} / ${allDebts.length}`;
+  document.getElementById('total-subs').textContent = totalSubs > 0 ? formatPLN(totalSubs) : '— zł';
 }
 
 function formatPLN(amount) {
@@ -138,6 +152,10 @@ const TYPE_LABELS = {
   paypo: 'PayPo / BNPL',
   studia: 'Studia',
   inne: 'Inne',
+  komorka: 'Sieć komórkowa',
+  internet: 'Internet',
+  streaming: 'Streaming',
+  sub_inne: 'Stała opłata',
 };
 
 const TYPE_COLORS = {
@@ -145,7 +163,66 @@ const TYPE_COLORS = {
   paypo: '#ff9500',
   studia: '#34c759',
   inne: '#8e8e93',
+  komorka: '#af52de',
+  internet: '#5856d6',
+  streaming: '#ff2d55',
+  sub_inne: '#8e8e93',
 };
+
+function isSubscription(d) {
+  return d.kind === 'subscription';
+}
+
+// Miesięczny koszt subskrypcji (rozłożenie rocznych na 12)
+function monthlyEquiv(d) {
+  const amount = Number(d.monthly_payment) || 0;
+  return d.billing_cycle === 'yearly' ? amount / 12 : amount;
+}
+
+function renderSubscriptionCard(d) {
+  const color = TYPE_COLORS[d.type] || '#8e8e93';
+  const active = d.active !== false;
+  const cycleLabel = d.billing_cycle === 'yearly' ? '/rok' : '/mies.';
+  const amount = Number(d.monthly_payment) || 0;
+  const dayStr = d.payment_day ? `${d.payment_day}. dnia miesiąca` : null;
+
+  return `
+    <div class="debt-card glass ${active ? '' : 'is-paid'}" data-id="${d.id}">
+      <div class="debt-card-top">
+        <div class="debt-info">
+          <div class="debt-badges">
+            <span class="debt-type-badge" style="background:${color}22;color:${color}">${TYPE_LABELS[d.type] || 'Stała opłata'}</span>
+            <span class="status-badge ${active ? 'status-paid' : 'status-due'}">${active ? 'Aktywna' : 'Wstrzymana'}</span>
+          </div>
+          <h3 class="debt-name">${d.name}</h3>
+          ${d.notes ? `<p class="debt-notes">${d.notes}</p>` : ''}
+        </div>
+        <div class="debt-amount-block">
+          <span class="debt-remaining">${formatPLN(amount)}</span>
+          <span class="debt-total">${cycleLabel}</span>
+        </div>
+      </div>
+      <div class="debt-card-bottom">
+        <div class="debt-meta">
+          <span class="meta-item">🔁 Stała opłata</span>
+          ${dayStr ? `<span class="meta-item">📅 ${dayStr}</span>` : ''}
+          ${d.billing_cycle === 'yearly' ? `<span class="meta-item">≈ ${formatPLN(monthlyEquiv(d))}/mies.</span>` : ''}
+        </div>
+        <div class="debt-actions">
+          <button class="icon-btn toggle-active-btn" data-id="${d.id}" title="${active ? 'Wstrzymaj' : 'Wznów'}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${active ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>' : '<polygon points="5 3 19 12 5 21 5 3"/>'}</svg>
+          </button>
+          <button class="icon-btn edit-debt-btn" data-id="${d.id}" title="Edytuj">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+          <button class="icon-btn delete-debt-btn" data-id="${d.id}" title="Usuń">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 function renderDebts(debts) {
   const list = document.getElementById('debts-list');
@@ -157,6 +234,8 @@ function renderDebts(debts) {
 
   list.innerHTML = debts
     .map((d) => {
+      if (isSubscription(d)) return renderSubscriptionCard(d);
+
       const inst = getInstallments(d);
       const hasInst = inst.length > 0;
       const paidCount = inst.filter((i) => i.paid).length;
@@ -245,6 +324,10 @@ function renderDebts(debts) {
     btn.addEventListener('click', () => togglePaid(btn.dataset.id));
   });
 
+  list.querySelectorAll('.toggle-active-btn').forEach((btn) => {
+    btn.addEventListener('click', () => toggleActive(btn.dataset.id));
+  });
+
   list.querySelectorAll('.installments-toggle').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.getElementById(`inst-${btn.dataset.id}`).classList.toggle('hidden');
@@ -269,6 +352,15 @@ async function togglePaid(id) {
   if (!debt) return;
   const newStatus = isPaid(debt) ? 'do_zaplaty' : 'oplacone';
   const { error } = await supabase.from('debts').update({ status: newStatus }).eq('id', id);
+  if (error) { alert('Błąd zmiany statusu: ' + error.message); return; }
+  loadDebts();
+}
+
+// Wstrzymaj / wznów subskrypcję
+async function toggleActive(id) {
+  const debt = allDebts.find((d) => String(d.id) === String(id));
+  if (!debt) return;
+  const { error } = await supabase.from('debts').update({ active: debt.active === false }).eq('id', id);
   if (error) { alert('Błąd zmiany statusu: ' + error.message); return; }
   loadDebts();
 }
@@ -367,14 +459,35 @@ document.getElementById('add-installment-btn').addEventListener('click', () => {
 });
 
 // --- Modal ---
+let currentKind = 'debt';
+
+function setKind(kind) {
+  currentKind = kind;
+  document.querySelectorAll('.kind-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.kind === kind);
+  });
+  const isSub = kind === 'subscription';
+  document.getElementById('debt-fields').style.display = isSub ? 'none' : '';
+  document.getElementById('subscription-fields').style.display = isSub ? '' : 'none';
+  document.getElementById('debt-name').placeholder = isSub
+    ? 'np. Sieć komórkowa Play'
+    : 'np. Kredyt gotówkowy PKO';
+}
+
+document.querySelectorAll('.kind-btn').forEach((btn) => {
+  btn.addEventListener('click', () => setKind(btn.dataset.kind));
+});
+
 function openAddModal() {
   editingId = null;
   editorInstallments = [];
-  document.getElementById('modal-title').textContent = 'Dodaj zadłużenie';
+  document.getElementById('modal-title').textContent = 'Dodaj pozycję';
   document.getElementById('debt-form').reset();
   document.getElementById('debt-id').value = '';
   document.getElementById('debt-status').value = 'do_zaplaty';
+  document.getElementById('sub-active').checked = true;
   document.getElementById('debt-submit-btn').textContent = 'Zapisz';
+  setKind('debt');
   renderInstallmentsEditor();
   updateInstallmentsHint();
   showModal();
@@ -386,17 +499,28 @@ function openEditModal(id) {
   editingId = id;
   editorInstallments = getInstallments(debt).map((i) => ({ ...i }));
 
-  document.getElementById('modal-title').textContent = 'Edytuj zadłużenie';
+  document.getElementById('modal-title').textContent = 'Edytuj pozycję';
   document.getElementById('debt-id').value = debt.id;
   document.getElementById('debt-name').value = debt.name || '';
-  document.getElementById('debt-type').value = debt.type || 'inne';
-  document.getElementById('debt-status').value = debt.status || 'do_zaplaty';
-  document.getElementById('debt-remaining').value = debt.remaining_amount || '';
-  document.getElementById('debt-total').value = debt.total_amount || '';
-  document.getElementById('debt-monthly').value = debt.monthly_payment || '';
-  document.getElementById('debt-due').value = debt.due_date || '';
   document.getElementById('debt-notes').value = debt.notes || '';
   document.getElementById('debt-submit-btn').textContent = 'Zaktualizuj';
+
+  if (isSubscription(debt)) {
+    setKind('subscription');
+    document.getElementById('sub-category').value = debt.type || 'sub_inne';
+    document.getElementById('sub-amount').value = debt.monthly_payment || '';
+    document.getElementById('sub-cycle').value = debt.billing_cycle || 'monthly';
+    document.getElementById('sub-day').value = debt.payment_day || '';
+    document.getElementById('sub-active').checked = debt.active !== false;
+  } else {
+    setKind('debt');
+    document.getElementById('debt-type').value = debt.type || 'inne';
+    document.getElementById('debt-status').value = debt.status || 'do_zaplaty';
+    document.getElementById('debt-remaining').value = debt.remaining_amount || '';
+    document.getElementById('debt-total').value = debt.total_amount || '';
+    document.getElementById('debt-monthly').value = debt.monthly_payment || '';
+    document.getElementById('debt-due').value = debt.due_date || '';
+  }
 
   renderInstallmentsEditor();
   updateInstallmentsHint();
@@ -421,32 +545,58 @@ document.getElementById('debt-modal').addEventListener('click', (e) => {
 document.getElementById('debt-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const payload = {
-    name: document.getElementById('debt-name').value.trim(),
-    type: document.getElementById('debt-type').value,
-    status: document.getElementById('debt-status').value,
-    remaining_amount: parseFloat(document.getElementById('debt-remaining').value) || 0,
-    total_amount: parseFloat(document.getElementById('debt-total').value) || null,
-    monthly_payment: parseFloat(document.getElementById('debt-monthly').value) || null,
-    due_date: document.getElementById('debt-due').value || null,
-    notes: document.getElementById('debt-notes').value.trim() || null,
-  };
+  let payload;
 
-  // Jeśli rozbito na raty — wylicz kwoty i status z listy rat
-  const cleanInstallments = editorInstallments
-    .filter((i) => i.amount !== '' && i.amount != null)
-    .map((i) => ({ amount: Number(i.amount) || 0, due_date: i.due_date || null, paid: !!i.paid }));
-
-  if (cleanInstallments.length > 0) {
-    const { total, remaining, allPaid } = deriveFromInstallments(cleanInstallments);
-    payload.installments = cleanInstallments;
-    payload.total_amount = total;
-    payload.remaining_amount = remaining;
-    payload.monthly_payment = null;
-    payload.due_date = null;
-    payload.status = allPaid ? 'oplacone' : 'do_zaplaty';
+  if (currentKind === 'subscription') {
+    // Stała opłata / subskrypcja
+    payload = {
+      kind: 'subscription',
+      name: document.getElementById('debt-name').value.trim(),
+      type: document.getElementById('sub-category').value,
+      monthly_payment: parseFloat(document.getElementById('sub-amount').value) || 0,
+      billing_cycle: document.getElementById('sub-cycle').value,
+      payment_day: parseInt(document.getElementById('sub-day').value, 10) || null,
+      active: document.getElementById('sub-active').checked,
+      notes: document.getElementById('debt-notes').value.trim() || null,
+      // pola długu nieużywane
+      status: 'do_zaplaty',
+      remaining_amount: 0,
+      total_amount: null,
+      due_date: null,
+      installments: null,
+    };
   } else {
-    payload.installments = null;
+    // Zadłużenie
+    payload = {
+      kind: 'debt',
+      name: document.getElementById('debt-name').value.trim(),
+      type: document.getElementById('debt-type').value,
+      status: document.getElementById('debt-status').value,
+      remaining_amount: parseFloat(document.getElementById('debt-remaining').value) || 0,
+      total_amount: parseFloat(document.getElementById('debt-total').value) || null,
+      monthly_payment: parseFloat(document.getElementById('debt-monthly').value) || null,
+      due_date: document.getElementById('debt-due').value || null,
+      notes: document.getElementById('debt-notes').value.trim() || null,
+      billing_cycle: null,
+      active: true,
+    };
+
+    // Jeśli rozbito na raty — wylicz kwoty i status z listy rat
+    const cleanInstallments = editorInstallments
+      .filter((i) => i.amount !== '' && i.amount != null)
+      .map((i) => ({ amount: Number(i.amount) || 0, due_date: i.due_date || null, paid: !!i.paid }));
+
+    if (cleanInstallments.length > 0) {
+      const { total, remaining, allPaid } = deriveFromInstallments(cleanInstallments);
+      payload.installments = cleanInstallments;
+      payload.total_amount = total;
+      payload.remaining_amount = remaining;
+      payload.monthly_payment = null;
+      payload.due_date = null;
+      payload.status = allPaid ? 'oplacone' : 'do_zaplaty';
+    } else {
+      payload.installments = null;
+    }
   }
 
   // Przypisz właściciela przy dodawaniu nowej pozycji

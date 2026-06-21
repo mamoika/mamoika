@@ -43,7 +43,7 @@
         <section class="summary-section">
           <div class="summary-header">
             <h1>Moje Finanse</h1>
-            <p class="summary-subtitle">Śledzenie zadłużeń i rat</p>
+            <p class="summary-subtitle">Śledzenie zadłużeń, rat i stałych opłat</p>
           </div>
           <div class="summary-cards">
             <div class="summary-card glass">
@@ -51,12 +51,12 @@
               <span class="summary-value" id="total-debt">— zł</span>
             </div>
             <div class="summary-card glass">
-              <span class="summary-label">Raty miesięczne</span>
+              <span class="summary-label">Miesięczne obciążenie</span>
               <span class="summary-value" id="total-monthly">— zł</span>
             </div>
             <div class="summary-card glass">
-              <span class="summary-label">Liczba pozycji</span>
-              <span class="summary-value" id="total-count">—</span>
+              <span class="summary-label">Stałe opłaty / mies.</span>
+              <span class="summary-value" id="total-subs">— zł</span>
             </div>
           </div>
         </section>
@@ -64,7 +64,7 @@
         <!-- Lista zadłużeń -->
         <section class="debts-section">
           <div class="section-top">
-            <h2>Zadłużenia</h2>
+            <h2>Moje pozycje</h2>
             <button class="btn btn-primary" id="open-modal-btn">+ Dodaj</button>
           </div>
 
@@ -75,6 +75,7 @@
             <button class="filter-tab" data-type="paypo">PayPo / BNPL</button>
             <button class="filter-tab" data-type="studia">Studia</button>
             <button class="filter-tab" data-type="inne">Inne</button>
+            <button class="filter-tab" data-type="subscription">Stałe opłaty</button>
           </div>
 
           <div id="debts-list" class="debts-list">
@@ -94,44 +95,78 @@
         <form id="debt-form" class="debt-form">
           <input type="hidden" id="debt-id" />
 
+          <!-- Przełącznik rodzaju pozycji -->
+          <div class="kind-toggle">
+            <button type="button" class="kind-btn active" data-kind="debt">Zadłużenie</button>
+            <button type="button" class="kind-btn" data-kind="subscription">Stała opłata</button>
+          </div>
+
           <label>Nazwa</label>
           <input type="text" id="debt-name" placeholder="np. Kredyt gotówkowy PKO" required />
 
-          <label>Typ</label>
-          <select id="debt-type" required>
-            <option value="kredyt">Kredyt bankowy</option>
-            <option value="paypo">PayPo / BNPL</option>
-            <option value="studia">Opłaty za studia</option>
-            <option value="inne">Inne</option>
-          </select>
+          <!-- Pola dla ZADŁUŻENIA -->
+          <div id="debt-fields">
+            <label>Typ</label>
+            <select id="debt-type">
+              <option value="kredyt">Kredyt bankowy</option>
+              <option value="paypo">PayPo / BNPL</option>
+              <option value="studia">Opłaty za studia</option>
+              <option value="inne">Inne</option>
+            </select>
 
-          <label>Status</label>
-          <select id="debt-status" required>
-            <option value="do_zaplaty">Do zapłaty</option>
-            <option value="oplacone">Opłacone</option>
-          </select>
+            <label>Status</label>
+            <select id="debt-status">
+              <option value="do_zaplaty">Do zapłaty</option>
+              <option value="oplacone">Opłacone</option>
+            </select>
 
-          <!-- Pojedyncza kwota (gdy bez rozbicia na raty) -->
-          <div id="single-amount-fields">
-            <label>Pozostała kwota (zł)</label>
-            <input type="number" id="debt-remaining" placeholder="np. 5000" min="0" step="0.01" />
+            <!-- Pojedyncza kwota (gdy bez rozbicia na raty) -->
+            <div id="single-amount-fields">
+              <label>Pozostała kwota (zł)</label>
+              <input type="number" id="debt-remaining" placeholder="np. 5000" min="0" step="0.01" />
 
-            <label>Całkowita kwota (zł) <span class="optional">opcjonalnie</span></label>
-            <input type="number" id="debt-total" placeholder="np. 10000" min="0" step="0.01" />
+              <label>Całkowita kwota (zł) <span class="optional">opcjonalnie</span></label>
+              <input type="number" id="debt-total" placeholder="np. 10000" min="0" step="0.01" />
 
-            <label>Rata miesięczna (zł) <span class="optional">opcjonalnie</span></label>
-            <input type="number" id="debt-monthly" placeholder="np. 350" min="0" step="0.01" />
+              <label>Rata miesięczna (zł) <span class="optional">opcjonalnie</span></label>
+              <input type="number" id="debt-monthly" placeholder="np. 350" min="0" step="0.01" />
 
-            <label>Termin / data spłaty <span class="optional">opcjonalnie</span></label>
-            <input type="date" id="debt-due" />
+              <label>Termin / data spłaty <span class="optional">opcjonalnie</span></label>
+              <input type="date" id="debt-due" />
+            </div>
+
+            <!-- Rozbicie na raty -->
+            <div class="installments-block">
+              <label>Raty <span class="optional">opcjonalnie — rozbij na poszczególne płatności</span></label>
+              <div id="installments-list"></div>
+              <button type="button" class="btn-add-rata" id="add-installment-btn">+ Dodaj ratę</button>
+              <p class="installments-hint" id="installments-hint"></p>
+            </div>
           </div>
 
-          <!-- Rozbicie na raty -->
-          <div class="installments-block">
-            <label>Raty <span class="optional">opcjonalnie — rozbij na poszczególne płatności</span></label>
-            <div id="installments-list"></div>
-            <button type="button" class="btn-add-rata" id="add-installment-btn">+ Dodaj ratę</button>
-            <p class="installments-hint" id="installments-hint"></p>
+          <!-- Pola dla STAŁEJ OPŁATY / SUBSKRYPCJI -->
+          <div id="subscription-fields" style="display:none">
+            <label>Kategoria</label>
+            <select id="sub-category">
+              <option value="komorka">Sieć komórkowa</option>
+              <option value="internet">Internet</option>
+              <option value="streaming">Streaming / media</option>
+              <option value="sub_inne">Inne</option>
+            </select>
+
+            <label>Kwota (zł)</label>
+            <input type="number" id="sub-amount" placeholder="np. 49" min="0" step="0.01" />
+
+            <label>Cykl płatności</label>
+            <select id="sub-cycle">
+              <option value="monthly">Miesięcznie</option>
+              <option value="yearly">Rocznie</option>
+            </select>
+
+            <label>Dzień płatności w miesiącu <span class="optional">opcjonalnie</span></label>
+            <input type="number" id="sub-day" placeholder="np. 10" min="1" max="31" />
+
+            <label class="checkbox-label"><input type="checkbox" id="sub-active" checked /> Aktywna (wliczana do obciążenia)</label>
           </div>
 
           <label>Notatki <span class="optional">opcjonalnie</span></label>
