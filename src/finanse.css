@@ -344,6 +344,93 @@ body {
 
 .form-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
 
+/* Edytor rat w modalu */
+.installments-block { margin-top: 0.5rem; }
+.rata-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.rata-edit-row .rata-amount { flex: 1; min-width: 0; }
+.rata-edit-row .rata-date { flex: 1.2; min-width: 0; }
+.rata-paid {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.rata-paid input { width: auto; }
+.rata-remove {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.rata-remove:hover { border-color: #ff3b30; color: #ff3b30; }
+.btn-add-rata {
+  background: rgba(0,0,0,0.05);
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  color: var(--accent-color);
+  width: 100%;
+  transition: background 0.15s;
+}
+.btn-add-rata:hover { background: rgba(0,122,255,0.08); }
+.installments-hint { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem; text-align: right; }
+
+/* Lista rat na karcie */
+.installments-toggle {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  padding: 0.25rem 0;
+  margin-top: 0.25rem;
+}
+.installments-sublist {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.5rem;
+}
+.installments-sublist.hidden { display: none; }
+.inst-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  font-size: 0.85rem;
+}
+.inst-row .inst-date { flex: 1; color: var(--text-secondary); }
+.inst-row .inst-amount { font-weight: 600; }
+.inst-row.inst-paid .inst-amount { text-decoration: line-through; color: var(--text-secondary); }
+.inst-toggle-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.inst-toggle-btn:hover { border-color: #34c759; color: #248a3d; }
+.inst-row.inst-paid .inst-toggle-btn { border-color: #34c759; color: #248a3d; }
+
 /* Responsive */
 @media (max-width: 640px) {
   .finanse-main { padding: 5rem 1rem 3rem; }

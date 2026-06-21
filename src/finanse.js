@@ -117,6 +117,22 @@ function formatPLN(amount) {
   return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(amount);
 }
 
+function formatDate(s) {
+  return new Date(s).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Wylicz wartości z listy rat
+function deriveFromInstallments(inst) {
+  const total = inst.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const remaining = inst.filter((i) => !i.paid).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const allPaid = inst.length > 0 && inst.every((i) => i.paid);
+  return { total, remaining, allPaid };
+}
+
+function getInstallments(d) {
+  return Array.isArray(d.installments) ? d.installments : [];
+}
+
 const TYPE_LABELS = {
   kredyt: 'Kredyt',
   paypo: 'PayPo / BNPL',
@@ -141,17 +157,38 @@ function renderDebts(debts) {
 
   list.innerHTML = debts
     .map((d) => {
-      const progress =
-        d.total_amount && d.remaining_amount
-          ? Math.round(((d.total_amount - d.remaining_amount) / d.total_amount) * 100)
-          : null;
+      const inst = getInstallments(d);
+      const hasInst = inst.length > 0;
+      const paidCount = inst.filter((i) => i.paid).length;
 
-      const dueStr = d.due_date
-        ? new Date(d.due_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })
-        : null;
+      let progress = null;
+      if (hasInst) {
+        const { total, remaining } = deriveFromInstallments(inst);
+        if (total > 0) progress = Math.round(((total - remaining) / total) * 100);
+      } else if (d.total_amount && d.remaining_amount) {
+        progress = Math.round(((d.total_amount - d.remaining_amount) / d.total_amount) * 100);
+      }
 
+      const dueStr = d.due_date ? formatDate(d.due_date) : null;
       const color = TYPE_COLORS[d.type] || '#8e8e93';
       const paid = isPaid(d);
+
+      const installmentsHtml = hasInst
+        ? `
+          <button class="installments-toggle" data-id="${d.id}">Raty: ${paidCount}/${inst.length} ▾</button>
+          <div class="installments-sublist hidden" id="inst-${d.id}">
+            ${inst
+              .map(
+                (i, idx) => `
+              <div class="inst-row ${i.paid ? 'inst-paid' : ''}">
+                <span class="inst-date">${i.due_date ? formatDate(i.due_date) : '—'}</span>
+                <span class="inst-amount">${formatPLN(Number(i.amount) || 0)}</span>
+                <button class="inst-toggle-btn" data-id="${d.id}" data-idx="${idx}">${i.paid ? '✓ Opłacona' : 'Opłać'}</button>
+              </div>`
+              )
+              .join('')}
+          </div>`
+        : '';
 
       return `
         <div class="debt-card glass ${paid ? 'is-paid' : ''}" data-id="${d.id}">
@@ -177,15 +214,20 @@ function renderDebts(debts) {
             <span class="progress-label">${progress}% spłacone</span>`
               : ''
           }
+          ${installmentsHtml}
           <div class="debt-card-bottom">
             <div class="debt-meta">
-              ${d.monthly_payment ? `<span class="meta-item">📅 ${formatPLN(d.monthly_payment)}/mies.</span>` : ''}
-              ${dueStr ? `<span class="meta-item">⏰ ${dueStr}</span>` : ''}
+              ${!hasInst && d.monthly_payment ? `<span class="meta-item">📅 ${formatPLN(d.monthly_payment)}/mies.</span>` : ''}
+              ${!hasInst && dueStr ? `<span class="meta-item">⏰ ${dueStr}</span>` : ''}
             </div>
             <div class="debt-actions">
-              <button class="icon-btn toggle-paid-btn" data-id="${d.id}" title="${paid ? 'Oznacz jako do zapłaty' : 'Oznacz jako opłacone'}">
+              ${
+                !hasInst
+                  ? `<button class="icon-btn toggle-paid-btn" data-id="${d.id}" title="${paid ? 'Oznacz jako do zapłaty' : 'Oznacz jako opłacone'}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              </button>
+              </button>`
+                  : ''
+              }
               <button class="icon-btn edit-debt-btn" data-id="${d.id}" title="Edytuj">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               </button>
@@ -201,6 +243,16 @@ function renderDebts(debts) {
 
   list.querySelectorAll('.toggle-paid-btn').forEach((btn) => {
     btn.addEventListener('click', () => togglePaid(btn.dataset.id));
+  });
+
+  list.querySelectorAll('.installments-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.getElementById(`inst-${btn.dataset.id}`).classList.toggle('hidden');
+    });
+  });
+
+  list.querySelectorAll('.inst-toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => toggleInstallmentPaid(btn.dataset.id, Number(btn.dataset.idx)));
   });
 
   list.querySelectorAll('.edit-debt-btn').forEach((btn) => {
@@ -221,6 +273,28 @@ async function togglePaid(id) {
   loadDebts();
 }
 
+// Przełącz status pojedynczej raty i przelicz pozycję
+async function toggleInstallmentPaid(id, idx) {
+  const debt = allDebts.find((d) => String(d.id) === String(id));
+  if (!debt) return;
+  const inst = getInstallments(debt).map((i) => ({ ...i }));
+  if (!inst[idx]) return;
+  inst[idx].paid = !inst[idx].paid;
+
+  const { total, remaining, allPaid } = deriveFromInstallments(inst);
+  const { error } = await supabase
+    .from('debts')
+    .update({
+      installments: inst,
+      total_amount: total,
+      remaining_amount: remaining,
+      status: allPaid ? 'oplacone' : 'do_zaplaty',
+    })
+    .eq('id', id);
+  if (error) { alert('Błąd zmiany statusu raty: ' + error.message); return; }
+  loadDebts();
+}
+
 async function deleteDebt(id) {
   if (!confirm('Na pewno usunąć tę pozycję?')) return;
   const { error } = await supabase.from('debts').delete().eq('id', id);
@@ -228,14 +302,81 @@ async function deleteDebt(id) {
   loadDebts();
 }
 
+// --- Edytor rat w modalu ---
+let editorInstallments = [];
+
+function renderInstallmentsEditor() {
+  const wrap = document.getElementById('installments-list');
+  wrap.innerHTML = editorInstallments
+    .map(
+      (i, idx) => `
+      <div class="rata-edit-row" data-idx="${idx}">
+        <input type="number" class="rata-amount" placeholder="kwota" min="0" step="0.01" value="${i.amount ?? ''}" />
+        <input type="date" class="rata-date" value="${i.due_date || ''}" />
+        <label class="rata-paid"><input type="checkbox" class="rata-paid-check" ${i.paid ? 'checked' : ''} /> opł.</label>
+        <button type="button" class="rata-remove" data-idx="${idx}" title="Usuń ratę">✕</button>
+      </div>`
+    )
+    .join('');
+
+  // Wiązanie zdarzeń: synchronizacja stanu i usuwanie
+  wrap.querySelectorAll('.rata-edit-row').forEach((row) => {
+    const idx = Number(row.dataset.idx);
+    row.querySelector('.rata-amount').addEventListener('input', (e) => {
+      editorInstallments[idx].amount = e.target.value;
+    });
+    row.querySelector('.rata-date').addEventListener('input', (e) => {
+      editorInstallments[idx].due_date = e.target.value || null;
+    });
+    row.querySelector('.rata-paid-check').addEventListener('change', (e) => {
+      editorInstallments[idx].paid = e.target.checked;
+    });
+  });
+  wrap.querySelectorAll('.rata-remove').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      editorInstallments.splice(Number(btn.dataset.idx), 1);
+      renderInstallmentsEditor();
+      updateInstallmentsHint();
+    });
+  });
+
+  updateSingleFieldsVisibility();
+}
+
+function updateSingleFieldsVisibility() {
+  // Gdy są raty, ukrywamy ręczne pola kwot (są wyliczane z rat)
+  document.getElementById('single-amount-fields').style.display =
+    editorInstallments.length > 0 ? 'none' : '';
+}
+
+function updateInstallmentsHint() {
+  const hint = document.getElementById('installments-hint');
+  if (editorInstallments.length === 0) {
+    hint.textContent = '';
+    return;
+  }
+  const norm = editorInstallments.map((i) => ({ amount: i.amount, paid: i.paid }));
+  const { total, remaining } = deriveFromInstallments(norm);
+  hint.textContent = `Razem: ${formatPLN(total)} • Zostało: ${formatPLN(remaining)}`;
+}
+
+document.getElementById('add-installment-btn').addEventListener('click', () => {
+  editorInstallments.push({ amount: '', due_date: null, paid: false });
+  renderInstallmentsEditor();
+  updateInstallmentsHint();
+});
+
 // --- Modal ---
 function openAddModal() {
   editingId = null;
+  editorInstallments = [];
   document.getElementById('modal-title').textContent = 'Dodaj zadłużenie';
   document.getElementById('debt-form').reset();
   document.getElementById('debt-id').value = '';
   document.getElementById('debt-status').value = 'do_zaplaty';
   document.getElementById('debt-submit-btn').textContent = 'Zapisz';
+  renderInstallmentsEditor();
+  updateInstallmentsHint();
   showModal();
 }
 
@@ -243,6 +384,7 @@ function openEditModal(id) {
   const debt = allDebts.find((d) => String(d.id) === String(id));
   if (!debt) return;
   editingId = id;
+  editorInstallments = getInstallments(debt).map((i) => ({ ...i }));
 
   document.getElementById('modal-title').textContent = 'Edytuj zadłużenie';
   document.getElementById('debt-id').value = debt.id;
@@ -256,6 +398,8 @@ function openEditModal(id) {
   document.getElementById('debt-notes').value = debt.notes || '';
   document.getElementById('debt-submit-btn').textContent = 'Zaktualizuj';
 
+  renderInstallmentsEditor();
+  updateInstallmentsHint();
   showModal();
 }
 
@@ -287,6 +431,23 @@ document.getElementById('debt-form').addEventListener('submit', async (e) => {
     due_date: document.getElementById('debt-due').value || null,
     notes: document.getElementById('debt-notes').value.trim() || null,
   };
+
+  // Jeśli rozbito na raty — wylicz kwoty i status z listy rat
+  const cleanInstallments = editorInstallments
+    .filter((i) => i.amount !== '' && i.amount != null)
+    .map((i) => ({ amount: Number(i.amount) || 0, due_date: i.due_date || null, paid: !!i.paid }));
+
+  if (cleanInstallments.length > 0) {
+    const { total, remaining, allPaid } = deriveFromInstallments(cleanInstallments);
+    payload.installments = cleanInstallments;
+    payload.total_amount = total;
+    payload.remaining_amount = remaining;
+    payload.monthly_payment = null;
+    payload.due_date = null;
+    payload.status = allPaid ? 'oplacone' : 'do_zaplaty';
+  } else {
+    payload.installments = null;
+  }
 
   // Przypisz właściciela przy dodawaniu nowej pozycji
   if (!editingId && currentUser) {
