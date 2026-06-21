@@ -4,37 +4,43 @@ import { supabase } from './supabaseClient';
 let posters = [];
 let editModeId = null;
 
-// Ukryty tryb administratora
-function setupHiddenAdmin() {
-  const logo = document.querySelector('.nav-logo');
-  if (!logo) return;
-  
-  // Sprawdź, czy sesja istnieje
-  if (sessionStorage.getItem('isAdmin') === 'true') {
+// Centralna autoryzacja przez Supabase Auth.
+// Zalogowany użytkownik = tryb administratora (edycja/dodawanie/usuwanie koncertów).
+function applyAuth(user) {
+  if (user) {
     document.body.classList.add('admin-mode');
+  } else {
+    document.body.classList.remove('admin-mode');
+  }
+}
+
+async function setupAuth() {
+  const logo = document.querySelector('.nav-logo');
+
+  // Dwa szybkie kliknięcia w logo: zaloguj (przejdź do strony logowania) lub wyloguj
+  if (logo) {
+    logo.addEventListener('dblclick', async (e) => {
+      e.preventDefault();
+      if (document.body.classList.contains('admin-mode')) {
+        if (confirm('Wylogować się?')) {
+          if (supabase) await supabase.auth.signOut();
+        }
+      } else {
+        // Strona logowania jest wspólna dla finansów i edycji koncertów
+        window.location.href = '/finanse.html';
+      }
+    });
   }
 
-  // Dwa szybkie kliknięcia w logo
-  logo.addEventListener('dblclick', (e) => {
-    e.preventDefault();
-    if (document.body.classList.contains('admin-mode')) {
-      // Wyloguj
-      if (confirm('Wylogować z trybu admina?')) {
-        sessionStorage.removeItem('isAdmin');
-        document.body.classList.remove('admin-mode');
-      }
-      return;
-    }
-    
-    // Zaloguj
-    const pwd = prompt('Wpisz hasło administratora:');
-    if (pwd === 'admin123') { // Domyślne proste hasło
-      sessionStorage.setItem('isAdmin', 'true');
-      document.body.classList.add('admin-mode');
-      alert('Zalogowano! Panel dodawania jest teraz widoczny na dole.');
-    } else if (pwd !== null) {
-      alert('Złe hasło!');
-    }
+  if (!supabase) return;
+
+  // Odtwórz istniejącą sesję (Supabase trzyma ją w localStorage, wspólnie dla obu stron)
+  const { data: { session } } = await supabase.auth.getSession();
+  applyAuth(session?.user || null);
+
+  // Reaguj na logowanie/wylogowanie
+  supabase.auth.onAuthStateChange((_event, session) => {
+    applyAuth(session?.user || null);
   });
 }
 
@@ -240,7 +246,7 @@ function setupAdminForm() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  setupHiddenAdmin();
+  setupAuth();
   setupAdminForm();
   fetchPosters();
 });
