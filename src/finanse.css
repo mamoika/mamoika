@@ -1,0 +1,338 @@
+:root {
+  --bg-color: #f5f5f7;
+  --surface-color: #ffffff;
+  --text-primary: #1d1d1f;
+  --text-secondary: #86868b;
+  --accent-color: #007aff;
+  --accent-hover: #0066cc;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* Nav */
+.top-nav {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  border-bottom: 1px solid var(--border-color);
+}
+.nav-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nav-logo {
+  font-weight: 600;
+  font-size: 1.2rem;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+.nav-links a {
+  text-decoration: none;
+  color: var(--text-secondary);
+  margin-left: 1.5rem;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text-primary); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 980px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-family);
+  transition: background 0.2s, transform 0.1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent-color); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: rgba(0,0,0,0.06); color: var(--text-primary); }
+.btn-secondary:hover { background: rgba(0,0,0,0.1); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Lock screen */
+.lock-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color);
+}
+.lock-card {
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: var(--shadow-md);
+}
+.lock-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.lock-card h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.4rem; }
+.lock-card p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; }
+#lock-form { display: flex; flex-direction: column; gap: 0.75rem; }
+#lock-form input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 1rem;
+  background: var(--surface-color);
+  font-family: var(--font-family);
+  outline: none;
+  text-align: center;
+}
+#lock-form input:focus { border-color: var(--accent-color); }
+.lock-error { color: #ff3b30; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.2em; }
+
+/* App hidden */
+.app-hidden { display: none; }
+
+/* Main layout */
+.finanse-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 6rem 2rem 4rem;
+}
+
+/* Summary */
+.summary-section { margin-bottom: 2.5rem; }
+.summary-header { margin-bottom: 1.5rem; }
+.summary-header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+.summary-subtitle { color: var(--text-secondary); font-size: 0.95rem; }
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.summary-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: var(--shadow-sm);
+}
+.summary-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.summary-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
+
+/* Debts section */
+.debts-section {}
+.section-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.section-top h2 { font-size: 1.3rem; font-weight: 600; }
+
+/* Filter tabs */
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.filter-tab {
+  padding: 0.4rem 1rem;
+  border-radius: 980px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
+  font-size: 0.85rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.filter-tab:hover { border-color: var(--accent-color); color: var(--accent-color); }
+.filter-tab.active { background: var(--accent-color); border-color: var(--accent-color); color: #fff; }
+
+/* Debts list */
+.debts-list { display: flex; flex-direction: column; gap: 1rem; }
+
+.debt-card {
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.debt-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.debt-info { flex: 1; }
+.debt-type-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.debt-name { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.2rem; }
+.debt-notes { font-size: 0.85rem; color: var(--text-secondary); }
+
+.debt-amount-block { text-align: right; flex-shrink: 0; }
+.debt-remaining { display: block; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.3px; }
+.debt-total { display: block; font-size: 0.8rem; color: var(--text-secondary); }
+
+/* Progress bar */
+.progress-bar-wrap {
+  width: 100%;
+  height: 5px;
+  background: rgba(0,0,0,0.07);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.35rem;
+}
+.progress-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.progress-label { font-size: 0.78rem; color: var(--text-secondary); }
+
+.debt-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+.debt-meta { display: flex; gap: 1rem; flex-wrap: wrap; }
+.meta-item { font-size: 0.82rem; color: var(--text-secondary); }
+
+.debt-actions { display: flex; gap: 0.5rem; }
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.icon-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+.delete-debt-btn:hover { border-color: #ff3b30; color: #ff3b30; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 3rem 1rem;
+  font-size: 0.95rem;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal-card {
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  padding: 2rem;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+.modal-header h3 { font-size: 1.2rem; font-weight: 600; }
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.modal-close:hover { background: rgba(0,0,0,0.06); }
+
+.debt-form { display: flex; flex-direction: column; gap: 0.5rem; }
+.debt-form label { font-size: 0.82rem; font-weight: 500; color: var(--text-secondary); margin-top: 0.5rem; }
+.debt-form input,
+.debt-form select,
+.debt-form textarea {
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: var(--font-family);
+  background: var(--surface-color);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+.debt-form input:focus,
+.debt-form select:focus,
+.debt-form textarea:focus { border-color: var(--accent-color); }
+.debt-form textarea { resize: vertical; }
+.optional { font-weight: 400; color: var(--text-secondary); font-style: italic; }
+
+.form-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .finanse-main { padding: 5rem 1rem 3rem; }
+  .summary-cards { grid-template-columns: 1fr; }
+  .debt-card-top { flex-direction: column; }
+  .debt-amount-block { text-align: left; }
+  .nav-content { padding: 1rem; }
+}

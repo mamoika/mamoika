@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Ruslan | Finanse</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/finanse.css">
+  </head>
+  <body>
+    <!-- Ekran hasła -->
+    <div id="lock-screen" class="lock-screen">
+      <div class="lock-card glass">
+        <div class="lock-icon">🔒</div>
+        <h2>Finanse</h2>
+        <p>Wpisz hasło, aby wejść</p>
+        <form id="lock-form">
+          <input type="password" id="lock-password" placeholder="Hasło" autocomplete="off" />
+          <button type="submit" class="btn btn-primary">Wejdź</button>
+        </form>
+        <p id="lock-error" class="lock-error"></p>
+      </div>
+    </div>
+
+    <!-- Główna treść (ukryta przed zalogowaniem) -->
+    <div id="app" class="app-hidden">
+      <nav class="top-nav glass">
+        <div class="nav-content">
+          <a href="/" class="nav-logo">Ruslan</a>
+          <div class="nav-links">
+            <a href="/">← Portfolio</a>
+            <a href="#" id="logout-btn">Wyloguj</a>
+          </div>
+        </div>
+      </nav>
+
+      <main class="finanse-main">
+        <!-- Podsumowanie -->
+        <section class="summary-section">
+          <div class="summary-header">
+            <h1>Moje Finanse</h1>
+            <p class="summary-subtitle">Śledzenie zadłużeń i rat</p>
+          </div>
+          <div class="summary-cards">
+            <div class="summary-card glass">
+              <span class="summary-label">Łączne zadłużenie</span>
+              <span class="summary-value" id="total-debt">— zł</span>
+            </div>
+            <div class="summary-card glass">
+              <span class="summary-label">Raty miesięczne</span>
+              <span class="summary-value" id="total-monthly">— zł</span>
+            </div>
+            <div class="summary-card glass">
+              <span class="summary-label">Liczba pozycji</span>
+              <span class="summary-value" id="total-count">—</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Lista zadłużeń -->
+        <section class="debts-section">
+          <div class="section-top">
+            <h2>Zadłużenia</h2>
+            <button class="btn btn-primary" id="open-modal-btn">+ Dodaj</button>
+          </div>
+
+          <!-- Filtry -->
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-type="all">Wszystkie</button>
+            <button class="filter-tab" data-type="kredyt">Kredyty</button>
+            <button class="filter-tab" data-type="paypo">PayPo / BNPL</button>
+            <button class="filter-tab" data-type="studia">Studia</button>
+            <button class="filter-tab" data-type="inne">Inne</button>
+          </div>
+
+          <div id="debts-list" class="debts-list">
+            <!-- Wypełniany przez JS -->
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modal dodawania/edycji -->
+    <div id="debt-modal" class="modal-overlay hidden">
+      <div class="modal-card glass">
+        <div class="modal-header">
+          <h3 id="modal-title">Dodaj zadłużenie</h3>
+          <button class="modal-close" id="close-modal-btn">✕</button>
+        </div>
+        <form id="debt-form" class="debt-form">
+          <input type="hidden" id="debt-id" />
+
+          <label>Nazwa</label>
+          <input type="text" id="debt-name" placeholder="np. Kredyt gotówkowy PKO" required />
+
+          <label>Typ</label>
+          <select id="debt-type" required>
+            <option value="kredyt">Kredyt bankowy</option>
+            <option value="paypo">PayPo / BNPL</option>
+            <option value="studia">Opłaty za studia</option>
+            <option value="inne">Inne</option>
+          </select>
+
+          <label>Pozostała kwota (zł)</label>
+          <input type="number" id="debt-remaining" placeholder="np. 5000" min="0" step="0.01" required />
+
+          <label>Całkowita kwota (zł) <span class="optional">opcjonalnie</span></label>
+          <input type="number" id="debt-total" placeholder="np. 10000" min="0" step="0.01" />
+
+          <label>Rata miesięczna (zł) <span class="optional">opcjonalnie</span></label>
+          <input type="number" id="debt-monthly" placeholder="np. 350" min="0" step="0.01" />
+
+          <label>Termin / data spłaty <span class="optional">opcjonalnie</span></label>
+          <input type="date" id="debt-due" />
+
+          <label>Notatki <span class="optional">opcjonalnie</span></label>
+          <textarea id="debt-notes" placeholder="Dodatkowe informacje..." rows="3"></textarea>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancel-modal-btn">Anuluj</button>
+            <button type="submit" class="btn btn-primary" id="debt-submit-btn">Zapisz</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="module" src="/src/finanse.js"></script>
+  </body>
+</html>
