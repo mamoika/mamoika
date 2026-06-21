@@ -119,7 +119,30 @@ function updateSummary() {
   // Miesięczne obciążenie = raty długów + stałe opłaty
   const debtMonthly = debts
     .filter((d) => !isPaid(d))
-    .reduce((s, d) => s + (d.monthly_payment || 0), 0);
+    .reduce((s, d) => {
+      if (d.monthly_payment) return s + d.monthly_payment;
+      // Dla długów opartych na ratach: suma nieopłaconych rat / liczba pozostałych miesięcy
+      const inst = getInstallments(d);
+      if (inst.length > 0) {
+        const unpaid = inst.filter((i) => !i.paid);
+        if (unpaid.length === 0) return s;
+        const datesWithDate = unpaid.filter((i) => i.due_date).map((i) => new Date(i.due_date));
+        if (datesWithDate.length > 0) {
+          const now = new Date();
+          const last = new Date(Math.max(...datesWithDate));
+          const months = Math.max(
+            1,
+            (last.getFullYear() - now.getFullYear()) * 12 + (last.getMonth() - now.getMonth()) + 1
+          );
+          const remaining = unpaid.reduce((r, i) => r + (Number(i.amount) || 0), 0);
+          return s + remaining / months;
+        }
+        // Brak dat — podziel po liczbie nieopłaconych rat
+        const remaining = unpaid.reduce((r, i) => r + (Number(i.amount) || 0), 0);
+        return s + remaining / unpaid.length;
+      }
+      return s;
+    }, 0);
   const totalMonthly = debtMonthly + totalSubs;
 
   document.getElementById('total-debt').textContent = formatPLN(totalDebt);
@@ -236,7 +259,11 @@ function renderDebts(debts) {
     .map((d) => {
       if (isSubscription(d)) return renderSubscriptionCard(d);
 
-      const inst = getInstallments(d);
+      const inst = [...getInstallments(d)].sort((a, b) => {
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date) - new Date(b.due_date);
+      });
       const hasInst = inst.length > 0;
       const paidCount = inst.filter((i) => i.paid).length;
 
