@@ -530,14 +530,19 @@ body {
 .inst-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   padding: 0.35rem 0;
   font-size: 0.85rem;
+  border-bottom: 1px solid var(--border-color);
 }
-.inst-row .inst-date { flex: 1; color: var(--text-secondary); }
-.inst-row .inst-amount { font-weight: 600; }
-.inst-row.inst-paid .inst-amount { text-decoration: line-through; color: var(--text-secondary); }
-.inst-toggle-btn {
+.inst-row:last-of-type { border-bottom: none; }
+.inst-nr { width: 22px; text-align: right; color: var(--text-secondary); font-size: 0.75rem; flex-shrink: 0; }
+.inst-row .inst-date { width: 90px; flex-shrink: 0; color: var(--text-secondary); }
+.inst-row .inst-amount { width: 75px; text-align: right; font-weight: 600; flex-shrink: 0; }
+.inst-row.inst-paid .inst-amount { text-decoration: line-through; color: var(--text-secondary); font-weight: 400; }
+.inst-paid-info { flex: 1; font-size: 0.8rem; color: #248a3d; }
+.inst-overpaid { color: #ff6b00; }
+.inst-pay-btn {
   background: none;
   border: 1px solid var(--border-color);
   border-radius: 7px;
@@ -545,11 +550,70 @@ body {
   font-size: 0.75rem;
   font-family: var(--font-family);
   cursor: pointer;
+  color: var(--accent-color);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.inst-pay-btn:hover { background: rgba(0,122,255,0.08); border-color: var(--accent-color); }
+.inst-undo-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.inst-undo-btn:hover { border-color: #ff3b30; color: #ff3b30; }
+.inst-pay-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  flex-wrap: wrap;
+}
+.inst-pay-form.hidden { display: none; }
+.inst-pay-form .ipf-amount,
+.inst-pay-form .ipf-date {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: var(--font-family);
+  background: var(--surface-color);
+  outline: none;
+}
+.inst-pay-form .ipf-amount { width: 120px; }
+.inst-pay-form .ipf-date { width: 140px; }
+.inst-pay-form .ipf-amount:focus,
+.inst-pay-form .ipf-date:focus { border-color: var(--accent-color); }
+.ipf-save {
+  padding: 0.4rem 0.8rem;
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ipf-save:hover { background: var(--accent-hover); }
+.ipf-cancel {
+  padding: 0.4rem 0.8rem;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  cursor: pointer;
   color: var(--text-secondary);
   transition: all 0.15s;
 }
-.inst-toggle-btn:hover { border-color: #34c759; color: #248a3d; }
-.inst-row.inst-paid .inst-toggle-btn { border-color: #34c759; color: #248a3d; }
+.ipf-cancel:hover { background: rgba(0,0,0,0.05); }
 
 /* Responsive */
 @media (max-width: 640px) {

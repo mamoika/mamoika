@@ -349,18 +349,45 @@ function renderDebts(debts) {
       const color = TYPE_COLORS[d.type] || '#8e8e93';
       const paid = isPaid(d);
 
+      const todayStr = new Date().toISOString().slice(0, 10);
       const installmentsHtml = hasInst
         ? `
           <button class="installments-toggle" data-id="${d.id}">Raty: ${paidCount}/${inst.length} ▾</button>
           <div class="installments-sublist hidden" id="inst-${d.id}">
             ${inst
               .map(
-                (i, idx) => `
-              <div class="inst-row ${i.paid ? 'inst-paid' : ''}">
-                <span class="inst-date">${i.due_date ? formatDate(i.due_date) : '—'}</span>
-                <span class="inst-amount">${formatPLN(Number(i.amount) || 0)}</span>
-                <button class="inst-toggle-btn" data-id="${d.id}" data-idx="${idx}">${i.paid ? '✓ Opłacona' : 'Opłać'}</button>
-              </div>`
+                (i, idx) => {
+                  const nr = i.nr || (idx + 1);
+                  const scheduled = formatPLN(Number(i.amount) || 0);
+                  if (i.paid) {
+                    const paidAmt = i.kwota_wplacona ? formatPLN(Number(i.kwota_wplacona)) : scheduled;
+                    const paidDate = i.data_wplaty ? formatDate(i.data_wplaty) : '';
+                    const over = i.kwota_wplacona && Number(i.kwota_wplacona) > Number(i.amount);
+                    return `
+                    <div class="inst-row inst-paid">
+                      <span class="inst-nr">${nr}</span>
+                      <span class="inst-date">${i.due_date ? formatDate(i.due_date) : '—'}</span>
+                      <span class="inst-amount">${scheduled}</span>
+                      <span class="inst-paid-info ${over ? 'inst-overpaid' : ''}">✓ ${paidAmt}${paidDate ? ' · ' + paidDate : ''}</span>
+                      <button class="inst-undo-btn" data-id="${d.id}" data-idx="${idx}" title="Cofnij wpłatę">↩</button>
+                    </div>`;
+                  } else {
+                    return `
+                    <div class="inst-row">
+                      <span class="inst-nr">${nr}</span>
+                      <span class="inst-date">${i.due_date ? formatDate(i.due_date) : '—'}</span>
+                      <span class="inst-amount">${scheduled}</span>
+                      <span class="inst-paid-info"></span>
+                      <button class="inst-pay-btn" data-id="${d.id}" data-idx="${idx}" data-amount="${Number(i.amount) || 0}">Opłać</button>
+                    </div>
+                    <div class="inst-pay-form hidden" id="ipf-${d.id}-${idx}">
+                      <input type="number" class="ipf-amount" placeholder="Kwota wpłaty" value="${Number(i.amount) || 0}" min="0" step="0.01" />
+                      <input type="date" class="ipf-date" value="${todayStr}" />
+                      <button class="ipf-save" data-id="${d.id}" data-idx="${idx}">Zapisz</button>
+                      <button class="ipf-cancel" data-id="${d.id}" data-idx="${idx}">Anuluj</button>
+                    </div>`;
+                  }
+                }
               )
               .join('')}
           </div>`
@@ -431,8 +458,31 @@ function renderDebts(debts) {
     });
   });
 
-  list.querySelectorAll('.inst-toggle-btn').forEach((btn) => {
-    btn.addEventListener('click', () => toggleInstallmentPaid(btn.dataset.id, Number(btn.dataset.idx)));
+  list.querySelectorAll('.inst-pay-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const form = document.getElementById(`ipf-${btn.dataset.id}-${btn.dataset.idx}`);
+      form.classList.toggle('hidden');
+      if (!form.classList.contains('hidden')) form.querySelector('.ipf-amount').focus();
+    });
+  });
+
+  list.querySelectorAll('.ipf-cancel').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.getElementById(`ipf-${btn.dataset.id}-${btn.dataset.idx}`).classList.add('hidden');
+    });
+  });
+
+  list.querySelectorAll('.ipf-save').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const form = document.getElementById(`ipf-${btn.dataset.id}-${btn.dataset.idx}`);
+      const kwota = parseFloat(form.querySelector('.ipf-amount').value) || 0;
+      const data = form.querySelector('.ipf-date').value || null;
+      recordInstallmentPayment(btn.dataset.id, Number(btn.dataset.idx), kwota, data);
+    });
+  });
+
+  list.querySelectorAll('.inst-undo-btn').forEach((btn) => {
+    btn.addEventListener('click', () => undoInstallmentPayment(btn.dataset.id, Number(btn.dataset.idx)));
   });
 
   list.querySelectorAll('.edit-debt-btn').forEach((btn) => {
@@ -462,25 +512,41 @@ async function toggleActive(id) {
   loadDebts();
 }
 
-// Przełącz status pojedynczej raty i przelicz pozycję
-async function toggleInstallmentPaid(id, idx) {
+// Zapisz wpłatę dla raty (z kwotą i datą)
+async function recordInstallmentPayment(id, idx, kwota, data_wplaty) {
   const debt = allDebts.find((d) => String(d.id) === String(id));
   if (!debt) return;
   const inst = getInstallments(debt).map((i) => ({ ...i }));
   if (!inst[idx]) return;
-  inst[idx].paid = !inst[idx].paid;
+  inst[idx].paid = true;
+  inst[idx].kwota_wplacona = kwota;
+  inst[idx].data_wplaty = data_wplaty || null;
 
   const { total, remaining, allPaid } = deriveFromInstallments(inst);
   const { error } = await supabase
     .from('debts')
-    .update({
-      installments: inst,
-      total_amount: total,
-      remaining_amount: remaining,
-      status: allPaid ? 'oplacone' : 'do_zaplaty',
-    })
+    .update({ installments: inst, total_amount: total, remaining_amount: remaining, status: allPaid ? 'oplacone' : 'do_zaplaty' })
     .eq('id', id);
-  if (error) { alert('Błąd zmiany statusu raty: ' + error.message); return; }
+  if (error) { alert('Błąd zapisu wpłaty: ' + error.message); return; }
+  loadDebts();
+}
+
+// Cofnij wpłatę dla raty
+async function undoInstallmentPayment(id, idx) {
+  const debt = allDebts.find((d) => String(d.id) === String(id));
+  if (!debt) return;
+  const inst = getInstallments(debt).map((i) => ({ ...i }));
+  if (!inst[idx]) return;
+  inst[idx].paid = false;
+  inst[idx].kwota_wplacona = 0;
+  inst[idx].data_wplaty = null;
+
+  const { total, remaining, allPaid } = deriveFromInstallments(inst);
+  const { error } = await supabase
+    .from('debts')
+    .update({ installments: inst, total_amount: total, remaining_amount: remaining, status: allPaid ? 'oplacone' : 'do_zaplaty' })
+    .eq('id', id);
+  if (error) { alert('Błąd cofania wpłaty: ' + error.message); return; }
   loadDebts();
 }
 
