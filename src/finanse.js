@@ -148,6 +148,76 @@ function updateSummary() {
   document.getElementById('total-debt').textContent = formatPLN(totalDebt);
   document.getElementById('total-monthly').textContent = totalMonthly > 0 ? formatPLN(totalMonthly) : '— zł';
   document.getElementById('total-subs').textContent = totalSubs > 0 ? formatPLN(totalSubs) : '— zł';
+
+  renderMonthlyBreakdown(totalMonthly);
+}
+
+function renderMonthlyBreakdown(totalMonthly) {
+  const el = document.getElementById('monthly-breakdown');
+  if (!el) return;
+
+  // Grupuj miesięczne obciążenie wg typu
+  const groups = {};
+  for (const d of allDebts) {
+    const amount = monthlyAmount(d);
+    if (amount <= 0) continue;
+    const key = d.type || 'inne';
+    groups[key] = (groups[key] || 0) + amount;
+  }
+
+  const entries = Object.entries(groups)
+    .map(([type, amount]) => ({ type, amount, label: TYPE_LABELS[type] || type, color: TYPE_COLORS[type] || '#8e8e93' }))
+    .sort((a, b) => b.amount - a.amount);
+
+  if (entries.length === 0 || totalMonthly <= 0) { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const stackedSegments = entries
+    .map((e) => `<div class="breakdown-seg" style="width:${((e.amount / totalMonthly) * 100).toFixed(1)}%;background:${e.color}" title="${e.label}: ${formatPLN(e.amount)}"></div>`)
+    .join('');
+
+  const rows = entries
+    .map((e) => {
+      const pct = Math.round((e.amount / totalMonthly) * 100);
+      return `
+        <div class="breakdown-row">
+          <span class="breakdown-dot" style="background:${e.color}"></span>
+          <span class="breakdown-label">${e.label}</span>
+          <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${pct}%;background:${e.color}"></div></div>
+          <span class="breakdown-amount">${formatPLN(e.amount)}/mies.</span>
+          <span class="breakdown-pct">${pct}%</span>
+        </div>`;
+    })
+    .join('');
+
+  el.innerHTML = `
+    <div class="breakdown-header">
+      <span class="breakdown-title">Miesięczne obciążenie — z czego wynika</span>
+      <span class="breakdown-total">${formatPLN(totalMonthly)}/mies.</span>
+    </div>
+    <div class="breakdown-stacked">${stackedSegments}</div>
+    <div class="breakdown-rows">${rows}</div>
+  `;
+}
+
+// Miesięczny wkład danej pozycji w obciążenie
+function monthlyAmount(d) {
+  if (isSubscription(d)) return d.active !== false ? monthlyEquiv(d) : 0;
+  if (isPaid(d)) return 0;
+  if (d.monthly_payment) return d.monthly_payment;
+  const inst = getInstallments(d);
+  if (inst.length === 0) return 0;
+  const unpaid = inst.filter((i) => !i.paid);
+  if (unpaid.length === 0) return 0;
+  const datesWithDate = unpaid.filter((i) => i.due_date).map((i) => new Date(i.due_date));
+  const remaining = unpaid.reduce((r, i) => r + (Number(i.amount) || 0), 0);
+  if (datesWithDate.length > 0) {
+    const now = new Date();
+    const last = new Date(Math.max(...datesWithDate));
+    const months = Math.max(1, (last.getFullYear() - now.getFullYear()) * 12 + (last.getMonth() - now.getMonth()) + 1);
+    return remaining / months;
+  }
+  return remaining / unpaid.length;
 }
 
 function formatPLN(amount) {

@@ -149,6 +149,91 @@ body {
 .summary-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 .summary-value { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
 
+/* Monthly breakdown */
+.monthly-breakdown {
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+.breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1rem;
+}
+.breakdown-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.breakdown-total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ff6b00;
+  letter-spacing: -0.3px;
+}
+.breakdown-stacked {
+  display: flex;
+  height: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+  gap: 2px;
+  margin-bottom: 1.25rem;
+}
+.breakdown-seg {
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  min-width: 3px;
+}
+.breakdown-rows { display: flex; flex-direction: column; gap: 0.6rem; }
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+}
+.breakdown-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.breakdown-label {
+  width: 130px;
+  flex-shrink: 0;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.breakdown-bar-wrap {
+  flex: 1;
+  height: 5px;
+  background: rgba(0,0,0,0.07);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.breakdown-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.breakdown-amount {
+  width: 110px;
+  text-align: right;
+  font-weight: 600;
+  flex-shrink: 0;
+  color: var(--text-primary);
+}
+.breakdown-pct {
+  width: 36px;
+  text-align: right;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
 /* Debts section */
 .debts-section {}
 .section-top {
